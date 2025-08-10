@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UX Analytics Test Page</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; line-height: 1.6; }
+        .button { background: #007bff; color: white; padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; margin: 8px; }
+        .card { background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #dee2e6; }
+        .tall-content { height: 200vh; background: linear-gradient(45deg, #f0f0f0, #e0e0e0); padding: 40px; }
+        #test-button { background: #28a745; }
+        .nav-link { color: #007bff; text-decoration: none; margin-right: 15px; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1 id="main-title">UX Analytics Test Page</h1>
+        <nav>
+            <a href="#section1" class="nav-link">Section 1</a>
+            <a href="#section2" class="nav-link">Section 2</a>
+            <a href="#footer" class="nav-link">Footer</a>
+        </nav>
+    </header>
+
+    <main>
+        <div class="card">
+            <h2>Interactive Elements</h2>
+            <p>Click the buttons below to generate click events:</p>
+            <button class="button" id="test-button">Primary Action</button>
+            <button class="button">Secondary Action</button>
+            <button class="button">Tertiary Action</button>
+        </div>
+
+        <section id="section1" class="card">
+            <h2>Section 1</h2>
+            <p>This is some content in section 1. The analytics snippet should capture clicks and scrolls.</p>
+            <ul>
+                <li><a href="#" class="test-link">Test Link 1</a></li>
+                <li><a href="#" class="test-link">Test Link 2</a></li>
+                <li><a href="#" class="test-link">Test Link 3</a></li>
+            </ul>
+        </section>
+
+        <div class="tall-content">
+            <h2 id="section2">Section 2 - Scroll to Test</h2>
+            <p>This section has a lot of height to test scroll depth tracking.</p>
+            <p>Keep scrolling down to generate scroll events...</p>
+            
+            <div style="margin-top: 300px;">
+                <h3>Middle Content</h3>
+                <button class="button middle-btn">Middle Button</button>
+            </div>
+
+            <div style="margin-top: 300px;">
+                <h3>Lower Content</h3>
+                <button class="button lower-btn">Lower Button</button>
+            </div>
+        </div>
+
+        <footer id="footer" class="card">
+            <h2>Footer</h2>
+            <p>You've reached the bottom! Check the dashboard to see the captured events.</p>
+            <button class="button footer-btn">Footer Button</button>
+        </footer>
+    </main>
+
+    <!-- Load the analytics snippet from our backend -->
+    <script src="http://localhost:4000/snippet.js"></script>
+    
+    <!-- Add some additional interactivity -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add click handlers for demonstration
+            document.getElementById('test-button').addEventListener('click', function() {
+                alert('Primary action clicked! Check the dashboard for events.');
+            });
+
+            document.querySelectorAll('.test-link').forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    console.log('Test link clicked:', this.textContent);
+                });
+            });
+        });
+    </script>
+</body>
+</html>

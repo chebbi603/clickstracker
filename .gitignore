@@ -1,0 +1,14 @@
+# Node
+node_modules/
+*.log
+npm-debug.log*
+
+# macOS
+.DS_Store
+
+# SQLite database
+backend/*.db
+backend/events.db
+
+# Vite build
+frontend/dist/
