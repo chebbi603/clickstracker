@@ -8,15 +8,21 @@ class Database {
 
   init() {
     return new Promise((resolve, reject) => {
-      this.db = new sqlite3.Database(path.join(__dirname, 'events.db'), (err) => {
+      const dbPath = path.join(__dirname, 'events.db');
+      this.db = new sqlite3.Database(dbPath, sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, (err) => {
         if (err) {
           console.error('Error opening database:', err);
           reject(err);
         } else {
-          console.log('Connected to SQLite database');
-          this.createTables()
-            .then(resolve)
-            .catch(reject);
+          // Enable WAL journal mode for better concurrent access
+          this.db.exec("PRAGMA journal_mode = WAL;", (pragmaErr) => {
+            if (pragmaErr) {
+              console.warn('Could not set WAL mode:', pragmaErr.message);
+            }
+            this.createTables()
+              .then(resolve)
+              .catch(reject);
+          });
         }
       });
     });
@@ -66,10 +72,10 @@ class Database {
             event.sessionId,
             event.pageUrl,
             event.eventType,
-            event.elementSelector || null,
-            event.clickX || null,
-            event.clickY || null,
-            event.scrollDepth || null,
+            event.elementSelector ?? null,
+            event.clickX ?? null,
+            event.clickY ?? null,
+            event.scrollDepth ?? null,
             event.timestamp
           ]);
         });

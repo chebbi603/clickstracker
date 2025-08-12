@@ -2,12 +2,32 @@ const express = require('express');
 const cors = require('cors');
 const { validateBatch } = require('./schema');
 const Database = require('./database');
+const RulesEngine = require('./rules-engine');
 
 const app = express();
 const db = new Database();
+const rules = new RulesEngine(db);
 const PORT = process.env.PORT || 4000;
 
-app.use(cors());
+// CORS configuration to support credentials (sendBeacon uses credentials: 'include')
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  'null' // when opening files from disk, Origin is 'null'
+];
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true); // allow non-browser tools
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    return callback(null, false);
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type']
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 app.use(express.json({ limit: '200kb' }));
 
 // SSE Clients
@@ -20,7 +40,7 @@ app.get('/snippet.js', (req, res) => {
   const apiBase = process.env.PUBLIC_API_URL || ('http://localhost:' + PORT);
   res.type('application/javascript').send(`
 (function(){
-  const API_URL = '${''}REPLACE_API_BASE/events';
+  const API_URL = 'REPLACE_API_BASE/events';
   const BATCH_SIZE = 10;
   const FLUSH_INTERVAL = 3000; // ms
   const SCROLL_THROTTLE = 1000; // ms
@@ -108,11 +128,15 @@ app.get('/snippet.js', (req, res) => {
 
 app.post('/events', async (req, res) => {
   const body = req.body;
+  console.log('[DEBUG] Received events batch:', JSON.stringify(body, null, 2));
+  
   if (!validateBatch(body)) {
+    console.log('[DEBUG] Validation failed:', validateBatch.errors);
     return res.status(400).json({ error: 'Invalid payload', details: validateBatch.errors });
   }
   try {
     await db.insertEvents(body.events);
+    console.log('[DEBUG] Successfully inserted', body.events.length, 'events');
     broadcastSSE({ type: 'metrics_update' });
     res.json({ status: 'ok' });
   } catch (e) {
@@ -149,6 +173,31 @@ app.get('/metrics', async (req, res) => {
   }
 });
 
+// Rules Engine endpoints
+app.get('/rules/config', (req, res) => {
+  res.json({ rules: rules.getRuleConfiguration() });
+});
+
+app.get('/rules/issues', async (req, res) => {
+  try {
+    const issues = await rules.analyzeAllRules();
+    res.json({ issues });
+  } catch (e) {
+    console.error('Rules issues error:', e);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Accept/Reject feedback for suggestions
+// In this MVP we just log feedback; in a real app we'd persist it
+app.post('/rules/feedback', express.json(), (req, res) => {
+  const { issueId, suggestionId, action } = req.body || {};
+  if (!issueId || !suggestionId || !['accept', 'reject'].includes(action)) {
+    return res.status(400).json({ error: 'Invalid feedback payload' });
+  }
+  console.log('[RULES FEEDBACK]', { issueId, suggestionId, action, ts: Date.now() });
+  res.json({ status: 'ok' });
+});
 (async () => {
   await db.init();
   app.listen(PORT, () => {
